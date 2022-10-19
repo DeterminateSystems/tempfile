@@ -16,15 +16,30 @@ use std::path::Path;
 #[cfg(not(target_os = "redox"))]
 use rustix::fs::{cwd, linkat, renameat, unlinkat, AtFlags};
 
-pub fn create_named(path: &Path, open_options: &mut OpenOptions) -> io::Result<File> {
+fn create_named_impl(
+    path: &Path,
+    open_options: &mut OpenOptions,
+    respect_umask: bool,
+) -> io::Result<File> {
     open_options.read(true).write(true).create_new(true);
 
     #[cfg(not(target_os = "wasi"))]
-    {
+    if !respect_umask {
         open_options.mode(0o600);
     }
 
     open_options.open(path)
+}
+
+pub fn create_named(path: &Path, open_options: &mut OpenOptions) -> io::Result<File> {
+    create_named_impl(path, open_options, false)
+}
+
+pub fn create_named_respecting_umask(
+    path: &Path,
+    open_options: &mut OpenOptions,
+) -> io::Result<File> {
+    create_named_impl(path, open_options, true)
 }
 
 fn create_unlinked(path: &Path) -> io::Result<File> {

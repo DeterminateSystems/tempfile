@@ -469,6 +469,53 @@ impl<'a, 'b> Builder<'a, 'b> {
         )
     }
 
+    /// Create the named temporary file in the specified directory, respecting the current umask.
+    ///
+    /// # Security
+    ///
+    /// See [the security][security] docs on `NamedTempFile`.
+    ///
+    /// # Resource leaking
+    ///
+    /// See [the resource leaking][resource-leaking] docs on `NamedTempFile`.
+    ///
+    /// # Errors
+    ///
+    /// If the file cannot be created, `Err` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::io;
+    /// # fn main() {
+    /// #     if let Err(_) = run() {
+    /// #         ::std::process::exit(1);
+    /// #     }
+    /// # }
+    /// # fn run() -> Result<(), io::Error> {
+    /// # use tempfile::Builder;
+    /// let tempfile = Builder::new().tempfile_in_respecting_umask("./")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [security]: struct.NamedTempFile.html#security
+    /// [resource-leaking]: struct.NamedTempFile.html#resource-leaking
+    pub fn tempfile_in_respecting_umask<P: AsRef<Path>>(
+        &self,
+        dir: P,
+    ) -> io::Result<NamedTempFile> {
+        util::create_helper(
+            dir.as_ref(),
+            self.prefix,
+            self.suffix,
+            self.random_len,
+            |path| {
+                file::create_named_respecting_umask(path, OpenOptions::new().append(self.append))
+            },
+        )
+    }
+
     /// Attempts to make a temporary directory inside of `env::temp_dir()` whose
     /// name will have the prefix, `prefix`. The directory and
     /// everything inside it will be automatically deleted once the
